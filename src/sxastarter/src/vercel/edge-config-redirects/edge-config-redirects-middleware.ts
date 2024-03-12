@@ -177,6 +177,8 @@ export class EdgeConfigRedirectsMiddleware extends RedirectsMiddleware {
   ): Promise<RedirectInfo | undefined> {
     // call Vercel Edge Config for redirects by the JSS app name
     const redirects = (await get(siteName)) as RedirectInfo[];
+    if (redirects.length === 0) return undefined;
+
     const tragetURL = req.nextUrl.pathname;
     const targetQS = req.nextUrl.search || '';
     const language = this.getLanguage(req);
