@@ -34,6 +34,8 @@ export default async function handler(_request: NextApiRequest, response: NextAp
     },
   ];
 
+  console.log({ items });
+
   try {
     const updateEdgeConfig = await fetch(`${process.env.EDGE_CONFIG_ENDPOINT}`, {
       method: 'PATCH',
