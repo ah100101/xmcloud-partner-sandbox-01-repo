@@ -26,6 +26,8 @@ export default async function handler(_request: NextApiRequest, response: NextAp
 
   if (redirects.length === 0) response.status(200).send({ message: 'No redirects present' });
 
+  console.info('Found redirects, updating Edge Config', { redirects });
+
   const items = [
     {
       operation: 'upsert',
@@ -33,8 +35,6 @@ export default async function handler(_request: NextApiRequest, response: NextAp
       value: JSON.stringify(redirects),
     },
   ];
-
-  console.log({ items });
 
   try {
     const updateEdgeConfig = await fetch(`${process.env.EDGE_CONFIG_ENDPOINT}`, {
