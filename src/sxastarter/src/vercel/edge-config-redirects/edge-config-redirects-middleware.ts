@@ -9,42 +9,29 @@ import {
   SiteInfo,
 } from '@sitecore-jss/sitecore-jss/site';
 import { debug } from '@sitecore-jss/sitecore-jss';
-import {
-  MiddlewareBase,
-  MiddlewareBaseConfig,
-} from '@sitecore-jss/sitecore-jss-nextjs/types/middleware/middleware';
 import { get } from '@vercel/edge-config';
+import {
+  RedirectsMiddleware,
+  RedirectsMiddlewareConfig,
+} from '@sitecore-jss/sitecore-jss-nextjs/middleware';
 
 const REGEXP_CONTEXT_SITE_LANG = new RegExp(/\$siteLang/, 'i');
 const REGEXP_ABSOLUTE_URL = new RegExp('^(?:[a-z]+:)?//', 'i');
 
-/**
- * extended RedirectsMiddlewareConfig config type for RedirectsMiddleware
- */
-export type RedirectsMiddlewareConfig = Omit<GraphQLRedirectsServiceConfig, 'fetch'> &
-  MiddlewareBaseConfig & {
-    /**
-     * These are all the locales you support in your application.
-     * These should match those in your next.config.js (i18n.locales).
-     */
-    locales: string[];
+export type EdgeConfigRedirectsMiddlewareConfig = Omit<GraphQLRedirectsServiceConfig, 'fetch'> &
+  RedirectsMiddlewareConfig & {
+    regions: string[];
   };
-/**
- * Middleware / handler fetches all redirects from Sitecore instance by grapqhl service
- * compares with current url and redirects to target url
- */
-export class RedirectsMiddleware extends MiddlewareBase {
-  private locales: string[];
+
+export class EdgeConfigRedirectsMiddleware extends RedirectsMiddleware {
+  private regions: string[];
 
   /**
    * @param {RedirectsMiddlewareConfig} [config] redirects middleware config
    */
   constructor(protected config: RedirectsMiddlewareConfig) {
     super(config);
-
-    // NOTE: we provide native fetch for compatibility on Next.js Edge Runtime
-    // (underlying default 'cross-fetch' is not currently compatible: https://github.com/lquixada/cross-fetch/issues/78)
-    this.locales = config.locales;
+    this.regions = config.locales;
   }
 
   /**
@@ -54,7 +41,7 @@ export class RedirectsMiddleware extends MiddlewareBase {
   public getHandler(): (req: NextRequest, res?: NextResponse) => Promise<NextResponse> {
     return async (req, res) => {
       try {
-        return await this.handler(req, res);
+        return await this.edgeConfigHandler(req, res);
       } catch (error) {
         console.log('Redirect middleware failed:');
         console.log(error);
@@ -63,7 +50,10 @@ export class RedirectsMiddleware extends MiddlewareBase {
     };
   }
 
-  private handler = async (req: NextRequest, res?: NextResponse): Promise<NextResponse> => {
+  private edgeConfigHandler = async (
+    req: NextRequest,
+    res?: NextResponse
+  ): Promise<NextResponse> => {
     const pathname = req.nextUrl.pathname;
     const language = this.getLanguage(req);
     const hostname = this.getHostHeader(req) || this.defaultHostname;
@@ -91,7 +81,7 @@ export class RedirectsMiddleware extends MiddlewareBase {
       site = this.getSite(req, res);
 
       // Find the redirect from result of RedirectService
-      const existsRedirect = await this.getExistsRedirect(req, site.name);
+      const existsRedirect = await this.getRedirects(req, site.name);
 
       if (!existsRedirect) {
         debug.redirects('skipped (redirect does not exist)');
@@ -121,7 +111,7 @@ export class RedirectsMiddleware extends MiddlewareBase {
         const source = `${url.pathname}${url.search}`;
         url.search = existsRedirect.isQueryStringPreserved ? url.search : '';
         const urlFirstPart = existsRedirect.target.split('/')[1];
-        if (this.locales.includes(urlFirstPart)) {
+        if (this.regions.includes(urlFirstPart)) {
           url.locale = urlFirstPart;
           existsRedirect.target = existsRedirect.target.replace(`/${urlFirstPart}`, '');
         }
@@ -181,7 +171,7 @@ export class RedirectsMiddleware extends MiddlewareBase {
    * @returns Promise<RedirectInfo | undefined>
    * @private
    */
-  private async getExistsRedirect(
+  private async getRedirects(
     req: NextRequest,
     siteName: string
   ): Promise<RedirectInfo | undefined> {

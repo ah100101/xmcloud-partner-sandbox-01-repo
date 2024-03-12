@@ -1,9 +1,9 @@
-import { NextApiResponse } from 'next';
+import { NextApiRequest, NextApiResponse } from 'next';
 import clientFactory from 'lib/graphql-client-factory';
 import { siteResolver } from 'lib/site-resolver';
 import { GraphQLRedirectsService } from '@sitecore-jss/sitecore-jss/site';
 
-export default async function handler(response: NextApiResponse) {
+export async function handler(_request: NextApiRequest, response: NextApiResponse) {
   if (
     !process.env.JSS_APP_NAME ||
     !process.env.EDGE_CONFIG_ENDPOINT ||

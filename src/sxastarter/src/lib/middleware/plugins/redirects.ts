@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { RedirectsMiddleware } from '@sitecore-jss/sitecore-jss-nextjs/middleware';
 import { MiddlewarePlugin } from '..';
 import { siteResolver } from 'lib/site-resolver';
 import clientFactory from 'lib/graphql-client-factory';
+import { EdgeConfigRedirectsMiddleware } from 'src/vercel/edge-config-redirects/edge-config-redirects-middleware';
 
 class RedirectsPlugin implements MiddlewarePlugin {
-  private redirectsMiddleware: RedirectsMiddleware;
+  private redirectsMiddleware: EdgeConfigRedirectsMiddleware;
   order = 0;
 
   constructor() {
-    this.redirectsMiddleware = new RedirectsMiddleware({
+    this.redirectsMiddleware = new EdgeConfigRedirectsMiddleware({
       // Client factory implementation
       clientFactory,
       // These are all the locales you support in your application.
