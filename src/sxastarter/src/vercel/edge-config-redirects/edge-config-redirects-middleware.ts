@@ -2,7 +2,6 @@ import regexParser from 'regex-parser';
 import { NextResponse, NextRequest } from 'next/server';
 import {
   RedirectInfo,
-  GraphQLRedirectsServiceConfig,
   REDIRECT_TYPE_301,
   REDIRECT_TYPE_302,
   REDIRECT_TYPE_SERVER_TRANSFER,
@@ -17,11 +16,6 @@ import {
 
 const REGEXP_CONTEXT_SITE_LANG = new RegExp(/\$siteLang/, 'i');
 const REGEXP_ABSOLUTE_URL = new RegExp('^(?:[a-z]+:)?//', 'i');
-
-export type EdgeConfigRedirectsMiddlewareConfig = Omit<GraphQLRedirectsServiceConfig, 'fetch'> &
-  RedirectsMiddlewareConfig & {
-    regions: string[];
-  };
 
 export class EdgeConfigRedirectsMiddleware extends RedirectsMiddleware {
   private regions: string[];
@@ -176,8 +170,9 @@ export class EdgeConfigRedirectsMiddleware extends RedirectsMiddleware {
     siteName: string
   ): Promise<RedirectInfo | undefined> {
     // call Vercel Edge Config for redirects by the JSS app name
-    const redirects = (await get(siteName)) as RedirectInfo[];
-    if (redirects.length === 0) return undefined;
+    const redirectsJson = await get<string>(siteName);
+    const redirects = redirectsJson && (JSON.parse(redirectsJson) as RedirectInfo[]);
+    if (!redirects || redirects?.length == 0) return undefined;
 
     const tragetURL = req.nextUrl.pathname;
     const targetQS = req.nextUrl.search || '';
